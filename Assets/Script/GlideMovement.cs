@@ -27,7 +27,7 @@ public class GlideMovement : MonoBehaviour
         myRotation.y += 20 * Input.GetAxis("Horizontal") * Time.deltaTime;
 
         myRotation.z = -5 * Input.GetAxis("Horizontal");
-        myRotation.z = Mathf.Clamp(myRotation.z, -5, 5);
+        myRotation.z = Mathf.Clamp(myRotation.z, -10, 10);
 
         transform.rotation = Quaternion.Euler(myRotation);
 
