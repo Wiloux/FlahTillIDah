@@ -10,7 +10,7 @@ public class GroundMovement : MonoBehaviour
     public Transform orientation;
 
     //Other
-    private Rigidbody rb;
+    public Rigidbody rb;
 
     //Rotation and look
     private float xRotation;
