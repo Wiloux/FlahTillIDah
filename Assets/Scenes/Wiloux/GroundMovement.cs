@@ -25,7 +25,6 @@ public class GroundMovement : MonoBehaviour
 
     public float counterMovement = 0.175f;
     private float threshold = 0.01f;
-    public float maxSlopeAngle = 35f;
 
     //Crouch & Slide
     private Vector3 crouchScale = new Vector3(1, 0.5f, 1);
@@ -46,6 +45,30 @@ public class GroundMovement : MonoBehaviour
     private Vector3 normalVector = Vector3.up;
     private Vector3 wallNormalVector;
 
+    //Slope
+    public float maxSlopeAngle = 35f;
+    private Vector3 hitPointNormal;
+    private Vector3 slopeMoveDirection;
+    public float slopeSlidingSpeed;
+    public float slopeAngle;
+    RaycastHit slopeHit;
+
+    public bool isOnSlope;
+
+    public Transform groundSphere;
+    public float sphereRadius;
+
+
+    public float speed = 12.5f;
+    public float drag = 6f;
+
+    private Vector3 myRotation;
+
+    public float percentage;
+
+    public bool wantsGlinding;
+
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -56,17 +79,42 @@ public class GroundMovement : MonoBehaviour
         playerScale = transform.localScale;
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+        rb = GetComponent<Rigidbody>();
+        myRotation = transform.eulerAngles;
     }
 
 
     private void FixedUpdate()
     {
-        Movement();
-    }
+
+        grounded = CheckIfGrounded();
+
+        if (!wantsGlinding && grounded)
+        {
+            Movement();
+            //Slope
+            if (Physics.Raycast(transform.position, Vector3.down, out slopeHit, Mathf.Infinity, whatIsGround))
+            {
+                hitPointNormal = slopeHit.normal;
+                slopeAngle = Vector3.Angle(hitPointNormal, Vector3.up);
+                isOnSlope = Vector3.Angle(hitPointNormal, Vector3.up) > maxSlopeAngle;
+
+            }
+            else
+            {
+                isOnSlope = false;
+            }
+        }
+        else if(wantsGlinding && !grounded)
+        {
+            Glid();
+        }
+    }                                 
 
     private void Update()
     {
         MyInput();
+
         Look();
     }
 
@@ -79,6 +127,10 @@ public class GroundMovement : MonoBehaviour
         y = Input.GetAxisRaw("Vertical");
         jumping = Input.GetButton("Jump");
         crouching = Input.GetKey(KeyCode.LeftControl);
+        if (Input.GetKeyDown(KeyCode.E)){
+            wantsGlinding = !wantsGlinding;
+        };
+
 
         //Crouching
         if (Input.GetKeyDown(KeyCode.LeftControl))
@@ -150,9 +202,20 @@ public class GroundMovement : MonoBehaviour
         // Movement while sliding
         if (grounded && crouching) multiplierV = 0f;
 
+        slopeMoveDirection = Vector3.ProjectOnPlane(orientation.transform.forward * y  * multiplier * multiplierV, slopeHit.normal);
+
+        if (isOnSlope && grounded)
+        {
+            Debug.Log(Time.deltaTime * slopeSlidingSpeed * new Vector3(hitPointNormal.x, hitPointNormal.y, hitPointNormal.z));
+            rb.AddForce(Time.deltaTime * slopeSlidingSpeed * slopeHit.normal.normalized);
+        }
+        else
+        {
+
         //Apply forces to move player
         rb.AddForce(orientation.transform.forward * y * moveSpeed * Time.deltaTime * multiplier * multiplierV);
         rb.AddForce(orientation.transform.right * x * moveSpeed * Time.deltaTime * multiplier);
+        }
     }
 
     private void Jump()
@@ -198,6 +261,29 @@ public class GroundMovement : MonoBehaviour
         //Perform the rotations
         playerCam.transform.localRotation = Quaternion.Euler(xRotation, desiredX, 0);
         orientation.transform.localRotation = Quaternion.Euler(0, desiredX, 0);
+    }
+    private void Glid()
+    {
+        myRotation.x += 20 * Input.GetAxis("Vertical") * Time.deltaTime;
+        myRotation.x = Mathf.Clamp(myRotation.x, -45, 45);
+
+        myRotation.y += 20 * Input.GetAxis("Horizontal") * Time.deltaTime;
+
+        myRotation.z = -5 * Input.GetAxis("Horizontal");
+        myRotation.z = Mathf.Clamp(myRotation.z, -5, 5);
+
+        transform.rotation = Quaternion.Euler(myRotation);
+
+        percentage = myRotation.x / 45;
+
+        float modifiedDrag = (percentage * -2) + 6;
+        float modifiedSpeed = ((speed + 3.6f) - speed) + speed;
+
+        rb.drag = modifiedDrag;
+        Vector3 localV = transform.InverseTransformDirection(rb.velocity);
+        localV.z = modifiedSpeed;
+        rb.velocity = transform.TransformDirection(localV);
+
     }
 
     private void CounterMovement(float x, float y, Vector2 mag)
@@ -268,26 +354,19 @@ public class GroundMovement : MonoBehaviour
         if (whatIsGround != (whatIsGround | (1 << layer))) return;
 
         //Iterate through every collision in a physics update
-        for (int i = 0; i < other.contactCount; i++)
-        {
-            Vector3 normal = other.contacts[i].normal;
-            //FLOOR
-            if (IsFloor(normal))
-            {
-                grounded = true;
-                cancellingGrounded = false;
-                normalVector = normal;
-                CancelInvoke(nameof(StopGrounded));
-            }
-        }
+    }
 
-        //Invoke ground/wall cancel, since we can't check normals with CollisionExit
-        float delay = 3f;
-        if (!cancellingGrounded)
-        {
-            cancellingGrounded = true;
-            Invoke(nameof(StopGrounded), Time.deltaTime * delay);
-        }
+    private bool CheckIfGrounded()
+    {
+        bool isGrounded = Physics.CheckSphere(groundSphere.position, sphereRadius, whatIsGround);
+
+
+        return isGrounded;
+    }
+
+    private void OnDrawGizmos()
+    {
+        Gizmos.DrawWireSphere(groundSphere.position, sphereRadius);
     }
 
     private void StopGrounded()
