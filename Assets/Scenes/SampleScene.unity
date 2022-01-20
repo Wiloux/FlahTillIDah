@@ -723,6 +723,7 @@ GameObject:
   - component: {fileID: 377447658}
   - component: {fileID: 377447660}
   - component: {fileID: 377447659}
+  - component: {fileID: 377447661}
   m_Layer: 0
   m_Name: Camera
   m_TagString: MainCamera
@@ -795,6 +796,22 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
+--- !u!114 &377447661
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 377447657}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f14deff7a2eca4b41b7ed4aaafdead49, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  moveController: {fileID: 1228679719}
+  shaking: 0.001
+  originalPos: {x: 0, y: 0, z: 0}
+  myCam: {fileID: 0}
 --- !u!1 &549712584
 GameObject:
   m_ObjectHideFlags: 0
@@ -1505,6 +1522,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playerCam: {fileID: 1721409735}
   orientation: {fileID: 2021838316}
+  rb: {fileID: 0}
   moveSpeed: 4500
   maxSpeed: 40
   grounded: 0
