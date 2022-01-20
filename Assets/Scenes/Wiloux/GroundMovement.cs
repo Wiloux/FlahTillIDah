@@ -69,6 +69,8 @@ public class GroundMovement : MonoBehaviour
     public bool wantsGlinding;
 
 
+    public float speedModifier = 20f;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -80,7 +82,7 @@ public class GroundMovement : MonoBehaviour
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
         rb = GetComponent<Rigidbody>();
-        myRotation = transform.eulerAngles;
+        myRotation = orientation.transform.eulerAngles;
     }
 
 
@@ -115,7 +117,18 @@ public class GroundMovement : MonoBehaviour
     {
         MyInput();
 
+        if(!wantsGlinding)
         Look();
+
+        if (!wantsGlinding)
+        {
+            rb.drag = 0;
+        }
+
+        if (grounded)
+        {
+            wantsGlinding = false;
+        }
     }
 
     /// <summary>
@@ -127,8 +140,11 @@ public class GroundMovement : MonoBehaviour
         y = Input.GetAxisRaw("Vertical");
         jumping = Input.GetButton("Jump");
         crouching = Input.GetKey(KeyCode.LeftControl);
-        if (Input.GetKeyDown(KeyCode.E)){
+        if (Input.GetKeyDown(KeyCode.E) && !CheckIfGrounded()){
             wantsGlinding = !wantsGlinding;
+
+            if(wantsGlinding)
+                myRotation = orientation.transform.eulerAngles;
         };
 
 
@@ -206,7 +222,6 @@ public class GroundMovement : MonoBehaviour
 
         if (isOnSlope && grounded)
         {
-            Debug.Log(Time.deltaTime * slopeSlidingSpeed * new Vector3(hitPointNormal.x, hitPointNormal.y, hitPointNormal.z));
             rb.AddForce(Time.deltaTime * slopeSlidingSpeed * slopeHit.normal.normalized);
         }
         else
@@ -261,6 +276,11 @@ public class GroundMovement : MonoBehaviour
         //Perform the rotations
         playerCam.transform.localRotation = Quaternion.Euler(xRotation, desiredX, 0);
         orientation.transform.localRotation = Quaternion.Euler(0, desiredX, 0);
+
+        if (!wantsGlinding)
+        {
+            transform.rotation = Quaternion.Euler(new Vector3(0, transform.rotation.y, 0));
+        }
     }
     private void Glid()
     {
@@ -272,17 +292,21 @@ public class GroundMovement : MonoBehaviour
         myRotation.z = -5 * Input.GetAxis("Horizontal");
         myRotation.z = Mathf.Clamp(myRotation.z, -5, 5);
 
+        orientation.transform.rotation = Quaternion.Euler(myRotation);
         transform.rotation = Quaternion.Euler(myRotation);
 
         percentage = myRotation.x / 45;
 
         float modifiedDrag = (percentage * -2) + 6;
-        float modifiedSpeed = ((speed + 3.6f) - speed) + speed;
+        float modifiedSpeed = ((speed + speedModifier) - speed) + speed;
 
         rb.drag = modifiedDrag;
         Vector3 localV = transform.InverseTransformDirection(rb.velocity);
         localV.z = modifiedSpeed;
         rb.velocity = transform.TransformDirection(localV);
+
+        playerCam.transform.localRotation = Quaternion.Euler(myRotation);
+        orientation.transform.localRotation = Quaternion.Euler(localV);
 
     }
 
