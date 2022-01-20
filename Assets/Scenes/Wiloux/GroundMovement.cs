@@ -1,13 +1,13 @@
-
 using System;
 using UnityEngine;
 
-public class Player : MonoBehaviour
+public class GroundMovement : MonoBehaviour
 {
+    // Start is called before the first frame update
 
     //Assingables
-  //  public Transform playerCam;
-   // public Transform orientation;
+    public Transform playerCam;
+    public Transform orientation;
 
     //Other
     private Rigidbody rb;
@@ -46,8 +46,6 @@ public class Player : MonoBehaviour
     private Vector3 normalVector = Vector3.up;
     private Vector3 wallNormalVector;
 
-    public Camera cam;
-
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -64,13 +62,12 @@ public class Player : MonoBehaviour
     private void FixedUpdate()
     {
         Movement();
-
     }
 
     private void Update()
     {
         MyInput();
-      //  Look();
+        Look();
     }
 
     /// <summary>
@@ -98,7 +95,7 @@ public class Player : MonoBehaviour
         {
             if (grounded)
             {
-                rb.AddForce(transform.forward * slideForce);
+                rb.AddForce(orientation.transform.forward * slideForce);
             }
         }
     }
@@ -154,12 +151,9 @@ public class Player : MonoBehaviour
         if (grounded && crouching) multiplierV = 0f;
 
         //Apply forces to move player
-        rb.AddForce(transform.forward * y * moveSpeed * Time.deltaTime * multiplier * multiplierV);
-        rb.AddForce(transform.right * x * moveSpeed * Time.deltaTime * multiplier);
-
-        transform.rotation.SetLookRotation(rb.velocity);
+        rb.AddForce(orientation.transform.forward * y * moveSpeed * Time.deltaTime * multiplier * multiplierV);
+        rb.AddForce(orientation.transform.right * x * moveSpeed * Time.deltaTime * multiplier);
     }
-
 
     private void Jump()
     {
@@ -187,23 +181,23 @@ public class Player : MonoBehaviour
         readyToJump = true;
     }
 
-//    private float desiredX;
+    private float desiredX;
     private void Look()
     {
         float mouseX = Input.GetAxis("Mouse X") * sensitivity * Time.fixedDeltaTime * sensMultiplier;
         float mouseY = Input.GetAxis("Mouse Y") * sensitivity * Time.fixedDeltaTime * sensMultiplier;
 
         //Find current look rotation
-        //Vector3 rot = playerCam.transform.localRotation.eulerAngles;
-       // desiredX = rot.y + mouseX;
+        Vector3 rot = playerCam.transform.localRotation.eulerAngles;
+        desiredX = rot.y + mouseX;
 
         //Rotate, and also make sure we dont over- or under-rotate.
         xRotation -= mouseY;
         xRotation = Mathf.Clamp(xRotation, -90f, 90f);
 
         //Perform the rotations
-        //playerCam.transform.localRotation = Quaternion.Euler(xRotation, desiredX, 0);
-     //   transform.localRotation = Quaternion.Euler(0, desiredX, 0);
+        playerCam.transform.localRotation = Quaternion.Euler(xRotation, desiredX, 0);
+        orientation.transform.localRotation = Quaternion.Euler(0, desiredX, 0);
     }
 
     private void CounterMovement(float x, float y, Vector2 mag)
@@ -220,11 +214,11 @@ public class Player : MonoBehaviour
         //Counter movement
         if (Math.Abs(mag.x) > threshold && Math.Abs(x) < 0.05f || (mag.x < -threshold && x > 0) || (mag.x > threshold && x < 0))
         {
-            rb.AddForce(moveSpeed * transform.right * Time.deltaTime * -mag.x * counterMovement);
+            rb.AddForce(moveSpeed * orientation.transform.right * Time.deltaTime * -mag.x * counterMovement);
         }
         if (Math.Abs(mag.y) > threshold && Math.Abs(y) < 0.05f || (mag.y < -threshold && y > 0) || (mag.y > threshold && y < 0))
         {
-            rb.AddForce(moveSpeed * transform.forward * Time.deltaTime * -mag.y * counterMovement);
+            rb.AddForce(moveSpeed * orientation.transform.forward * Time.deltaTime * -mag.y * counterMovement);
         }
 
         //Limit diagonal running. This will also cause a full stop if sliding fast and un-crouching, so not optimal.
@@ -243,7 +237,7 @@ public class Player : MonoBehaviour
     /// <returns></returns>
     public Vector2 FindVelRelativeToLook()
     {
-        float lookAngle = transform.forward.y;
+        float lookAngle = orientation.transform.eulerAngles.y;
         float moveAngle = Mathf.Atan2(rb.velocity.x, rb.velocity.z) * Mathf.Rad2Deg;
 
         float u = Mathf.DeltaAngle(lookAngle, moveAngle);
@@ -302,3 +296,4 @@ public class Player : MonoBehaviour
     }
 
 }
+
