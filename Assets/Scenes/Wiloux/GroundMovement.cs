@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class GroundMovement : MonoBehaviour
@@ -39,7 +41,7 @@ public class GroundMovement : MonoBehaviour
 
     //Input
     float x, y;
-    bool jumping, sprinting, crouching;
+    public bool jumping, sprinting, crouching;
 
     //Sliding
     private Vector3 normalVector = Vector3.up;
@@ -70,6 +72,8 @@ public class GroundMovement : MonoBehaviour
 
 
     public float speedModifier = 20f;
+
+    public Vector3 characterVelocity { get; set; }
 
     void Awake()
     {
@@ -129,6 +133,9 @@ public class GroundMovement : MonoBehaviour
         {
             wantsGlinding = false;
         }
+
+        WallRunInput();
+        CheckForWall();
     }
 
     /// <summary>
@@ -237,8 +244,9 @@ public class GroundMovement : MonoBehaviour
     {
         if (grounded && readyToJump)
         {
+            jumping = true;
             readyToJump = false;
-
+            
             //Add jump forces
             rb.AddForce(Vector2.up * jumpForce * 1.5f);
             rb.AddForce(normalVector * jumpForce * 0.5f);
@@ -252,11 +260,37 @@ public class GroundMovement : MonoBehaviour
 
             Invoke(nameof(ResetJump), jumpCooldown);
         }
+        if (grounded && isWallRunning)
+        {
+            jumping = true;
+            readyToJump = false;
+
+            //normal jump
+            if (isWallLeft && Input.GetKeyUp(KeyCode.D) || isWallRight && Input.GetKeyUp(KeyCode.Q))
+            {
+                Debug.Log("Jump");
+                rb.AddForce(Vector2.up * jumpForce * 1.5f);
+                rb.AddForce(normalVector * jumpForce * 0.5f);
+            }
+
+            //sidwards wallhop
+            if (isWallRight || isWallLeft && Input.GetKeyUp(KeyCode.Q) || Input.GetKeyUp(KeyCode.D)) rb.AddForce(-orientation.up * jumpForce * 1f);
+            if (isWallRight && Input.GetKeyDown(KeyCode.Q)) rb.AddForce(-orientation.right * jumpForce * 3.2f);
+            if (isWallLeft && Input.GetKeyDown(KeyCode.D)) rb.AddForce(orientation.right * jumpForce * 3.2f);
+
+            //Always add forward force
+            rb.AddForce(orientation.forward * jumpForce * 1f);
+
+            Debug.Log("Jump");
+
+            Invoke(nameof(ResetJump), jumpCooldown);
+        }
     }
 
     private void ResetJump()
     {
         readyToJump = true;
+        jumping = false;
     }
 
     private float desiredX;
@@ -396,6 +430,67 @@ public class GroundMovement : MonoBehaviour
     private void StopGrounded()
     {
         grounded = false;
+    }
+    public void SpeedSlash()
+    {
+        StartCoroutine(speedUp(2));
+    }
+    private IEnumerator speedUp(float waitTime)
+    {
+
+
+        speed = speed * 2;
+        yield return new WaitForSeconds(waitTime);
+        speed = speed / 2;
+        yield return null;
+
+
+    }
+
+    //Wallrunning
+    public LayerMask whatIsWall;
+    public float wallrunForce, maxWallrunTime, maxWallSpeed;
+    bool isWallRight, isWallLeft;
+    bool isWallRunning;
+    public float maxWallRunCameraTilt, wallRunCameraTilt;
+    
+    private void WallRunInput() 
+    {
+        //Wallrun
+        if (Input.GetKey(KeyCode.D) && isWallRight) StartWallrun();
+        if (Input.GetKey(KeyCode.Q) && isWallLeft) StartWallrun();
+    }
+    private void StartWallrun()
+    {
+        rb.useGravity = false;
+        isWallRunning = true;
+        
+
+        if (rb.velocity.magnitude <= maxWallSpeed)
+        {
+            rb.AddForce(orientation.forward * wallrunForce * Time.deltaTime);
+
+            
+            if (isWallRight)
+                rb.AddForce(orientation.right * wallrunForce / 5 * Time.deltaTime);
+            else
+                rb.AddForce(-orientation.right * wallrunForce / 5 * Time.deltaTime);
+        }
+    }
+    private void StopWallRun()
+    {
+        isWallRunning = false;
+        rb.useGravity = true;
+    }
+    private void CheckForWall() 
+    {
+        isWallRight = Physics.Raycast(transform.position, orientation.right, 1f, whatIsWall);
+        isWallLeft = Physics.Raycast(transform.position, -orientation.right, 1f, whatIsWall);
+        
+        //leave wall run
+        if (!isWallLeft && !isWallRight) StopWallRun();
+        ////reset jump
+        if (isWallLeft || isWallRight) grounded = true;
     }
 
 }
