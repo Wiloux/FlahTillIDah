@@ -7,7 +7,7 @@ public class Slash : MonoBehaviour
     public GroundMovement gm;
 
 
-    private void OnTriggerEnter(Collider other)
+    private void OnTriggerStay(Collider other)
     {
         
     
