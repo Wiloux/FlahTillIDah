@@ -136,10 +136,13 @@ public class GroundMovement : MonoBehaviour
 
         WallRunInput();
         CheckForWall();
-        
-        if (isWallRunning)
+        if (isWallRunning && iswalljumping)
         {
             WallJump();
+        }
+        if (isWallRunning)
+        {
+            SideJump();
         }
     }
 
@@ -272,7 +275,6 @@ public class GroundMovement : MonoBehaviour
     {
         if (readyToJump && isWallRunning)
         {
-            Debug.Log("Jump");
             rb.constraints = RigidbodyConstraints.None;
             jumping = true;
             readyToJump = false;
@@ -298,9 +300,45 @@ public class GroundMovement : MonoBehaviour
                 rb.AddForce(orientation.up * jumpForce * 0.25f);
             }
 
+            if (isWallRight && jumping)
+            {
+                rb.AddForce(-orientation.right * jumpForce * 0.25f);
+                rb.AddForce(orientation.up * jumpForce * 0.25f);
+            }
+            if (isWallLeft && jumping)
+            {
+
+                rb.AddForce(orientation.right * jumpForce * 0.25f);
+                rb.AddForce(orientation.up * jumpForce * 0.25f);
+            }
             //Always add forward force
             //rb.AddForce(orientation.forward * jumpForce * 1f);
 
+
+            iswalljumping = false;
+            Invoke(nameof(ResetJump), jumpCooldown);
+        }
+    }
+    private void SideJump()
+    {
+        if (readyToJump && isWallRunning)
+        {
+            rb.constraints = RigidbodyConstraints.None;
+            jumping = true;
+            readyToJump = false;
+
+
+            if (isWallRight && Input.GetKey(KeyCode.Q))
+            {
+                rb.AddForce(-orientation.right * jumpForce * 1f);
+                rb.AddForce(orientation.up * jumpForce * 0.25f);
+            }
+            if (isWallLeft && Input.GetKey(KeyCode.D))
+            {
+
+                rb.AddForce(orientation.right * jumpForce * 1f);
+                rb.AddForce(orientation.up * jumpForce * 0.25f);
+            }
 
 
             Invoke(nameof(ResetJump), jumpCooldown);
@@ -467,20 +505,27 @@ public class GroundMovement : MonoBehaviour
     }
 
     //Wallrunning
+    //Variable
     public LayerMask whatIsWall;
     public float wallrunForce, maxWallrunTime, maxWallSpeed;
     public bool isWallRight, isWallLeft;
     public bool isWallRunning;
     public float maxWallRunCameraTilt, wallRunCameraTilt;
-
+    public bool iswalljumping = false;
     private void WallRunInput()
     {
         //Wallrun
         if (Input.GetKey(KeyCode.D) && isWallRight) StartWallrun();
         if (Input.GetKey(KeyCode.Q) && isWallLeft) StartWallrun();
-        if (readyToJump && isWallRunning && jumping)
+        if (isWallRight && Input.GetKey(KeyCode.Space))
         {
-            WallJump();
+            iswalljumping = true;
+            //WallJump();
+        }
+        if (isWallLeft && Input.GetKey(KeyCode.Space))
+        {
+            iswalljumping = true;
+            //WallJump();
         }
     }
     private void StartWallrun()
