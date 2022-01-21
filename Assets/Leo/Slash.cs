@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class Slash : MonoBehaviour
 {
-    public PlayerController pc;
+    public GroundMovement gm;
 
 
     private void OnTriggerEnter(Collider other)
@@ -15,7 +15,7 @@ public class Slash : MonoBehaviour
         if (other.CompareTag("Destructible"))
         {
             Debug.Log("Slash");
-            pc.SpeedSlash();
+            gm.SpeedSlash();
             Destroy(other.gameObject);
             
         }
