@@ -8,50 +8,69 @@ public class GroundMovement : MonoBehaviour
     // Start is called before the first frame update
 
     //Assingables
+    [Header("Assignables")]
     public Transform playerCam;
     public Transform orientation;
+    [Space(10)]
 
+    [Header("Physics")]
     //Other
     public Rigidbody rb;
+    [Space(10)]
 
+    [Header("Rotation and Look")]
     //Rotation and look
     private float xRotation;
     private float sensitivity = 50f;
     private float sensMultiplier = 1f;
+    [Space(10)]
 
+    [Header("Movement")]
     //Movement
     public float moveSpeed = 4500;
-    public float[] maxSpeed;
-    public int speedThreshold;
-    public float maxTimeToSpeedBoost;
-    float timeSpeedBoostRemaining;
-    public GameObject speedBoostPrompt;
+    //public float[] maxSpeed;    
+    public float maxSpeed;
     public bool justLeapt;
     public bool grounded;
     public LayerMask whatIsGround;
-
     public float counterMovement = 0.175f;
     private float threshold = 0.01f;
 
+    //QTE Accélération
+    //public int speedThreshold;
+    //public float maxTimeToSpeedBoost;
+    //float timeSpeedBoostRemaining;
+    //public GameObject speedBoostPrompt;
+    [Space(10)]
+
+    [Header("Crouch & Slide")]
     //Crouch & Slide
     private Vector3 crouchScale = new Vector3(1, 0.5f, 1);
     private Vector3 playerScale;
     public float slideForce = 400;
     public float slideCounterMovement = 0.2f;
+    [Space(10)]
 
+    [Header("Jump")]
     //Jumping
     private bool readyToJump = true;
     private float jumpCooldown = 1;
     public float jumpForce = 550f;
+    [Space(10)]
 
+    [Header("Input")]
     //Input
     float x, y;
     public bool jumping, sprinting, crouching;
+    [Space(10)]
 
+    [Header("Sliding")]
     //Sliding
     private Vector3 normalVector = Vector3.up;
     private Vector3 wallNormalVector;
+    [Space(10)]
 
+    [Header("Slope")]
     //Slope
     public float maxSlopeAngle = 35f;
     private Vector3 hitPointNormal;
@@ -61,6 +80,13 @@ public class GroundMovement : MonoBehaviour
     RaycastHit slopeHit;
 
     public bool isOnSlope;
+    [Space(10)]
+
+    [Header("Dash")]
+    //Dash
+    public Transform dashTarget;
+    public float dashForce;
+    [Space(10)]
 
     public Transform groundSphere;
     public float sphereRadius;
@@ -80,9 +106,8 @@ public class GroundMovement : MonoBehaviour
 
     public Vector3 characterVelocity { get; set; }
 
-    //Dash
-    public Transform dashTarget;
-    public float dashForce;
+
+    
 
     void Awake()
     {
@@ -109,7 +134,7 @@ public class GroundMovement : MonoBehaviour
             if (justLeapt)
             {
                 justLeapt = false;
-                timeSpeedBoostRemaining = maxTimeToSpeedBoost;
+                //timeSpeedBoostRemaining = maxTimeToSpeedBoost;
             }
             Movement();
             //Slope
@@ -130,25 +155,26 @@ public class GroundMovement : MonoBehaviour
             Glid();
         }
 
-        if (timeSpeedBoostRemaining > 0)
-        {
-            speedBoostPrompt.SetActive(true);
-            timeSpeedBoostRemaining -= Time.deltaTime;
-            if (Input.GetKeyDown(KeyCode.F))
-            {
-                if (speedThreshold < maxSpeed.Length - 1)
-                {
-                    speedThreshold++;
-                    speedUp(3);
-                }
-                timeSpeedBoostRemaining = 0;
+        //QTE ACCELERATION
+        //if (timeSpeedBoostRemaining > 0)
+        //{
+        //    speedBoostPrompt.SetActive(true);
+        //    timeSpeedBoostRemaining -= Time.deltaTime;
+        //    if (Input.GetKeyDown(KeyCode.F))
+        //    {
+        //        if (speedThreshold < maxSpeed.Length - 1)
+        //        {
+        //            speedThreshold++;
+        //            speedUp(3);
+        //        }
+        //        timeSpeedBoostRemaining = 0;
 
-            }
-        }
-        else
-        {
-            speedBoostPrompt.SetActive(false);
-        }
+        //    }
+        //}
+        //else
+        //{
+        //    speedBoostPrompt.SetActive(false);
+        //}
     }
 
     private void Update()
@@ -249,7 +275,8 @@ public class GroundMovement : MonoBehaviour
         if (readyToJump && jumping) Jump();
 
         //Set max speed
-        float maxSpeed = this.maxSpeed[speedThreshold];
+        //float maxSpeed = this.maxSpeed[speedThreshold];     
+        float maxSpeed = this.maxSpeed;
 
         //If sliding down a ramp, add force down so player stays grounded and also builds speed
         if (crouching && grounded && readyToJump)
@@ -364,10 +391,10 @@ public class GroundMovement : MonoBehaviour
         }
 
         //Limit diagonal running. This will also cause a full stop if sliding fast and un-crouching, so not optimal.
-        if (Mathf.Sqrt((Mathf.Pow(rb.velocity.x, 2) + Mathf.Pow(rb.velocity.z, 2))) > maxSpeed[speedThreshold])
+        if (Mathf.Sqrt((Mathf.Pow(rb.velocity.x, 2) + Mathf.Pow(rb.velocity.z, 2))) > maxSpeed)
         {
             float fallspeed = rb.velocity.y;
-            Vector3 n = rb.velocity.normalized * maxSpeed[speedThreshold];
+            Vector3 n = rb.velocity.normalized * maxSpeed;
             rb.velocity = new Vector3(n.x, fallspeed, n.z);
         }
     }
@@ -509,7 +536,7 @@ public class GroundMovement : MonoBehaviour
                 rb.AddForce(-orientation.right * jumpForce * 0.25f);
                 rb.AddForce(orientation.up * jumpForce * 0.25f);
                 justLeapt = true;
-                timeSpeedBoostRemaining = 0;
+                //timeSpeedBoostRemaining = 0;
             }
             if (isWallLeft && jumping)
             {
@@ -517,7 +544,7 @@ public class GroundMovement : MonoBehaviour
                 rb.AddForce(orientation.right * jumpForce * 0.25f);
                 rb.AddForce(orientation.up * jumpForce * 0.25f);
                 justLeapt = true;
-                timeSpeedBoostRemaining = 0;
+                //timeSpeedBoostRemaining = 0;
             }
             //Always add forward force
             //rb.AddForce(orientation.forward * jumpForce * 1f);
@@ -542,7 +569,7 @@ public class GroundMovement : MonoBehaviour
                 rb.AddForce(-orientation.right * jumpForce * 1f);
                 rb.AddForce(orientation.up * jumpForce * 0.25f);
                 justLeapt = true;
-                timeSpeedBoostRemaining = 0;
+                //timeSpeedBoostRemaining = 0;
             }
             if (isWallLeft && Input.GetKey(KeyCode.E))
             {
@@ -550,7 +577,7 @@ public class GroundMovement : MonoBehaviour
                 rb.AddForce(orientation.right * jumpForce * 1f);
                 rb.AddForce(orientation.up * jumpForce * 0.25f);
                 justLeapt = true;
-                timeSpeedBoostRemaining = 0;
+                //timeSpeedBoostRemaining = 0;
             }
 
 
@@ -576,8 +603,12 @@ public class GroundMovement : MonoBehaviour
     private void WallRunInput()
     {
         //Wallrun
-        if (Input.GetKey(KeyCode.D) && isWallRight) StartWallrun();
-        if (Input.GetKey(KeyCode.Q) && isWallLeft) StartWallrun();
+        if (isWallRight ||isWallLeft)
+        {
+            wantsGlinding = false;
+            StartWallrun();
+        }
+        
         if (isWallRight && Input.GetKey(KeyCode.Space))
         {
             iswalljumping = true;
@@ -591,10 +622,12 @@ public class GroundMovement : MonoBehaviour
     }
     private void StartWallrun()
     {
-        if (speedThreshold < maxSpeed.Length - 1)
-        {
-            timeSpeedBoostRemaining = maxTimeToSpeedBoost;
-        }
+        //QTE ACCELERATION
+        //if (speedThreshold < maxSpeed.Length - 1)
+        //{
+        //    timeSpeedBoostRemaining = maxTimeToSpeedBoost;
+        //    Debug.Log("Can speed boost");
+        //}
         rb.useGravity = false;
         isWallRunning = true;
         rb.constraints = RigidbodyConstraints.FreezePositionY;
@@ -635,7 +668,7 @@ public class GroundMovement : MonoBehaviour
     #region Dash
     void Dash()
     {
-        rb.AddForce((dashTarget.position - transform.position) * dashForce);
+        rb.AddForce((dashTarget.position - transform.position).normalized * dashForce, ForceMode.VelocityChange);
     }
     #endregion
 }

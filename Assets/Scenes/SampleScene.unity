@@ -1774,20 +1774,7 @@ MonoBehaviour:
   orientation: {fileID: 2021838316}
   rb: {fileID: 0}
   moveSpeed: 4500
-  maxSpeed:
-  - 15
-  - 20
-  - 25
-  - 30
-  - 35
-  - 40
-  - 45
-  - 50
-  - 55
-  - 60
-  speedThreshold: 0
-  maxTimeToSpeedBoost: 1
-  speedBoostPrompt: {fileID: 868579023}
+  maxSpeed: 25
   justLeapt: 0
   grounded: 0
   whatIsGround:
@@ -1804,6 +1791,8 @@ MonoBehaviour:
   slopeSlidingSpeed: -9000
   slopeAngle: 0
   isOnSlope: 0
+  dashTarget: {fileID: 1192219974}
+  dashForce: 25
   groundSphere: {fileID: 1149115345}
   sphereRadius: 0.5
   speed: 50
@@ -1811,8 +1800,6 @@ MonoBehaviour:
   percentage: 25
   wantsGlinding: 0
   speedModifier: 20
-  dashTarget: {fileID: 1192219974}
-  dashForce: 200
   whatIsWall:
     serializedVersion: 2
     m_Bits: 64
