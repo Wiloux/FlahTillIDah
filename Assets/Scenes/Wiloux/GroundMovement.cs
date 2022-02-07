@@ -21,7 +21,12 @@ public class GroundMovement : MonoBehaviour
 
     //Movement
     public float moveSpeed = 4500;
-    public float maxSpeed = 20;
+    public float[] maxSpeed;
+    public int speedThreshold;
+    public float maxTimeToSpeedBoost;
+    float timeSpeedBoostRemaining;
+    public GameObject speedBoostPrompt;
+    public bool justLeapt;
     public bool grounded;
     public LayerMask whatIsGround;
 
@@ -75,6 +80,10 @@ public class GroundMovement : MonoBehaviour
 
     public Vector3 characterVelocity { get; set; }
 
+    //Dash
+    public Transform dashTarget;
+    public float dashForce;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -97,6 +106,11 @@ public class GroundMovement : MonoBehaviour
 
         if (!wantsGlinding && grounded)
         {
+            if (justLeapt)
+            {
+                justLeapt = false;
+                timeSpeedBoostRemaining = maxTimeToSpeedBoost;
+            }
             Movement();
             //Slope
             if (Physics.Raycast(transform.position, Vector3.down, out slopeHit, Mathf.Infinity, whatIsGround))
@@ -111,18 +125,38 @@ public class GroundMovement : MonoBehaviour
                 isOnSlope = false;
             }
         }
-        else if(wantsGlinding && !grounded)
+        else if (wantsGlinding && !grounded)
         {
             Glid();
         }
-    }                                 
+
+        if (timeSpeedBoostRemaining > 0)
+        {
+            speedBoostPrompt.SetActive(true);
+            timeSpeedBoostRemaining -= Time.deltaTime;
+            if (Input.GetKeyDown(KeyCode.F))
+            {
+                if (speedThreshold < maxSpeed.Length - 1)
+                {
+                    speedThreshold++;
+                    speedUp(3);
+                }
+                timeSpeedBoostRemaining = 0;
+
+            }
+        }
+        else
+        {
+            speedBoostPrompt.SetActive(false);
+        }
+    }
 
     private void Update()
     {
         MyInput();
 
-        if(!wantsGlinding)
-        Look();
+        if (!wantsGlinding)
+            Look();
 
         if (!wantsGlinding)
         {
@@ -144,6 +178,12 @@ public class GroundMovement : MonoBehaviour
         {
             SideJump();
         }
+
+        if (Input.GetKeyDown(KeyCode.LeftShift))
+        {
+            Dash();
+        }
+
     }
 
     /// <summary>
@@ -155,10 +195,12 @@ public class GroundMovement : MonoBehaviour
         y = Input.GetAxisRaw("Vertical");
         jumping = Input.GetButton("Jump");
         crouching = Input.GetKey(KeyCode.LeftControl);
-        if (Input.GetKeyDown(KeyCode.E) && !CheckIfGrounded()){
+        if (Input.GetKeyDown(KeyCode.E) && !CheckIfGrounded())
+        {
+            justLeapt = false;
             wantsGlinding = !wantsGlinding;
 
-            if(wantsGlinding)
+            if (wantsGlinding)
                 myRotation = orientation.transform.eulerAngles;
         };
 
@@ -169,6 +211,8 @@ public class GroundMovement : MonoBehaviour
         if (Input.GetKeyUp(KeyCode.LeftControl))
             StopCrouch();
     }
+
+    #region Movement
 
     private void StartCrouch()
     {
@@ -205,7 +249,7 @@ public class GroundMovement : MonoBehaviour
         if (readyToJump && jumping) Jump();
 
         //Set max speed
-        float maxSpeed = this.maxSpeed;
+        float maxSpeed = this.maxSpeed[speedThreshold];
 
         //If sliding down a ramp, add force down so player stays grounded and also builds speed
         if (crouching && grounded && readyToJump)
@@ -233,7 +277,7 @@ public class GroundMovement : MonoBehaviour
         // Movement while sliding
         if (grounded && crouching) multiplierV = 0f;
 
-        slopeMoveDirection = Vector3.ProjectOnPlane(orientation.transform.forward * y  * multiplier * multiplierV, slopeHit.normal);
+        slopeMoveDirection = Vector3.ProjectOnPlane(orientation.transform.forward * y * multiplier * multiplierV, slopeHit.normal);
 
         if (isOnSlope && grounded)
         {
@@ -242,114 +286,11 @@ public class GroundMovement : MonoBehaviour
         else
         {
 
-        //Apply forces to move player
-        rb.AddForce(orientation.transform.forward * y * moveSpeed * Time.deltaTime * multiplier * multiplierV);
-        rb.AddForce(orientation.transform.right * x * moveSpeed * Time.deltaTime * multiplier);
+            //Apply forces to move player
+            rb.AddForce(orientation.transform.forward * y * moveSpeed * Time.deltaTime * multiplier * multiplierV);
+            rb.AddForce(orientation.transform.right * x * moveSpeed * Time.deltaTime * multiplier);
         }
     }
-
-    private void Jump()
-    {
-        Debug.Log("Jump");
-        if (grounded && readyToJump)
-        {
-            jumping = true;
-            readyToJump = false;
-            
-            //Add jump forces
-            rb.AddForce(Vector2.up * jumpForce * 1.5f);
-            rb.AddForce(normalVector * jumpForce * 0.5f);
-
-            //If jumping while falling, reset y velocity.
-            Vector3 vel = rb.velocity;
-            if (rb.velocity.y < 0.5f)
-                rb.velocity = new Vector3(vel.x, 0, vel.z);
-            else if (rb.velocity.y > 0)
-                rb.velocity = new Vector3(vel.x, vel.y / 2, vel.z);
-
-            Invoke(nameof(ResetJump), jumpCooldown);
-        }
-       
-    }
-    private void WallJump()
-    {
-        if (readyToJump && isWallRunning)
-        {
-            rb.constraints = RigidbodyConstraints.None;
-            jumping = true;
-            readyToJump = false;
-
-
-            //normal jump
-            //if ((isWallLeft && !Input.GetKey(KeyCode.D) || isWallRight && !Input.GetKey(KeyCode.Q)) && jumping)
-            //{
-            //    rb.AddForce(Vector2.up * jumpForce * 1.5f);
-            //}
-
-            //sidwards wallhop
-            //if ((isWallRight || isWallLeft && Input.GetKey(KeyCode.Q) || Input.GetKey(KeyCode.D)) && jumping) rb.AddForce(-orientation.up * jumpForce * 1f);
-            if (isWallRight && Input.GetKey(KeyCode.Q)) 
-            {
-                rb.AddForce(-orientation.right * jumpForce * 1f);
-                rb.AddForce(orientation.up * jumpForce * 0.25f);
-            } 
-            if (isWallLeft && Input.GetKey(KeyCode.D))
-            {
-
-                rb.AddForce(orientation.right * jumpForce * 1f);
-                rb.AddForce(orientation.up * jumpForce * 0.25f);
-            }
-
-            if (isWallRight && jumping)
-            {
-                rb.AddForce(-orientation.right * jumpForce * 0.25f);
-                rb.AddForce(orientation.up * jumpForce * 0.25f);
-            }
-            if (isWallLeft && jumping)
-            {
-
-                rb.AddForce(orientation.right * jumpForce * 0.25f);
-                rb.AddForce(orientation.up * jumpForce * 0.25f);
-            }
-            //Always add forward force
-            //rb.AddForce(orientation.forward * jumpForce * 1f);
-
-
-            iswalljumping = false;
-            Invoke(nameof(ResetJump), jumpCooldown);
-        }
-    }
-    private void SideJump()
-    {
-        if (readyToJump && isWallRunning)
-        {
-            rb.constraints = RigidbodyConstraints.None;
-            jumping = true;
-            readyToJump = false;
-
-
-            if (isWallRight && Input.GetKey(KeyCode.Q))
-            {
-                rb.AddForce(-orientation.right * jumpForce * 1f);
-                rb.AddForce(orientation.up * jumpForce * 0.25f);
-            }
-            if (isWallLeft && Input.GetKey(KeyCode.D))
-            {
-
-                rb.AddForce(orientation.right * jumpForce * 1f);
-                rb.AddForce(orientation.up * jumpForce * 0.25f);
-            }
-
-
-            Invoke(nameof(ResetJump), jumpCooldown);
-        }
-    }
-    private void ResetJump()
-    {
-        readyToJump = true;
-        jumping = false;
-    }
-
     private float desiredX;
     private void Look()
     {
@@ -423,10 +364,10 @@ public class GroundMovement : MonoBehaviour
         }
 
         //Limit diagonal running. This will also cause a full stop if sliding fast and un-crouching, so not optimal.
-        if (Mathf.Sqrt((Mathf.Pow(rb.velocity.x, 2) + Mathf.Pow(rb.velocity.z, 2))) > maxSpeed)
+        if (Mathf.Sqrt((Mathf.Pow(rb.velocity.x, 2) + Mathf.Pow(rb.velocity.z, 2))) > maxSpeed[speedThreshold])
         {
             float fallspeed = rb.velocity.y;
-            Vector3 n = rb.velocity.normalized * maxSpeed;
+            Vector3 n = rb.velocity.normalized * maxSpeed[speedThreshold];
             rb.velocity = new Vector3(n.x, fallspeed, n.z);
         }
     }
@@ -503,7 +444,127 @@ public class GroundMovement : MonoBehaviour
 
 
     }
+    #endregion
 
+    #region Jump
+    private void Jump()
+    {
+        Debug.Log("Jump");
+        if (grounded && readyToJump)
+        {
+            jumping = true;
+            readyToJump = false;
+
+            //Add jump forces
+            rb.AddForce(Vector2.up * jumpForce * 1.5f);
+            rb.AddForce(normalVector * jumpForce * 0.5f);
+
+            //If jumping while falling, reset y velocity.
+            Vector3 vel = rb.velocity;
+            if (rb.velocity.y < 0.5f)
+                rb.velocity = new Vector3(vel.x, 0, vel.z);
+            else if (rb.velocity.y > 0)
+                rb.velocity = new Vector3(vel.x, vel.y / 2, vel.z);
+
+            Invoke(nameof(ResetJump), jumpCooldown);
+        }
+
+    }
+    private void WallJump()
+    {
+        if (readyToJump && isWallRunning)
+        {
+        
+            rb.constraints = RigidbodyConstraints.None;
+            jumping = true;
+            readyToJump = false;
+
+
+            //normal jump
+            //if ((isWallLeft && !Input.GetKey(KeyCode.D) || isWallRight && !Input.GetKey(KeyCode.Q)) && jumping)
+            //{
+            //    rb.AddForce(Vector2.up * jumpForce * 1.5f);
+            //}
+
+            //sidwards wallhop
+            //if ((isWallRight || isWallLeft && Input.GetKey(KeyCode.Q) || Input.GetKey(KeyCode.D)) && jumping) rb.AddForce(-orientation.up * jumpForce * 1f);
+            //if (isWallRight && Input.GetKey(KeyCode.A))
+            //{
+            //    rb.AddForce(-orientation.right * jumpForce * 1f);
+            //    rb.AddForce(orientation.up * jumpForce * 0.25f);
+            //    justLeapt = true;
+            //    timeSpeedBoostRemaining = 0;
+            //}
+            //if (isWallLeft && Input.GetKey(KeyCode.E))
+            //{
+
+            //    rb.AddForce(orientation.right * jumpForce * 1f);
+            //    rb.AddForce(orientation.up * jumpForce * 0.25f);
+            //    justLeapt = true;
+            //    timeSpeedBoostRemaining = 0;
+            //}
+
+            if (isWallRight && jumping)
+            {
+                rb.AddForce(-orientation.right * jumpForce * 0.25f);
+                rb.AddForce(orientation.up * jumpForce * 0.25f);
+                justLeapt = true;
+                timeSpeedBoostRemaining = 0;
+            }
+            if (isWallLeft && jumping)
+            {
+
+                rb.AddForce(orientation.right * jumpForce * 0.25f);
+                rb.AddForce(orientation.up * jumpForce * 0.25f);
+                justLeapt = true;
+                timeSpeedBoostRemaining = 0;
+            }
+            //Always add forward force
+            //rb.AddForce(orientation.forward * jumpForce * 1f);
+
+
+            iswalljumping = false;
+            Invoke(nameof(ResetJump), jumpCooldown);
+        }
+    }
+    private void SideJump()
+    {
+        if (readyToJump && isWallRunning)
+        {
+            
+            rb.constraints = RigidbodyConstraints.None;
+            jumping = true;
+            readyToJump = false;
+
+
+            if (isWallRight && Input.GetKey(KeyCode.A))
+            {
+                rb.AddForce(-orientation.right * jumpForce * 1f);
+                rb.AddForce(orientation.up * jumpForce * 0.25f);
+                justLeapt = true;
+                timeSpeedBoostRemaining = 0;
+            }
+            if (isWallLeft && Input.GetKey(KeyCode.E))
+            {
+
+                rb.AddForce(orientation.right * jumpForce * 1f);
+                rb.AddForce(orientation.up * jumpForce * 0.25f);
+                justLeapt = true;
+                timeSpeedBoostRemaining = 0;
+            }
+
+
+            Invoke(nameof(ResetJump), jumpCooldown);
+        }
+    }
+    private void ResetJump()
+    {
+        readyToJump = true;
+        jumping = false;
+    }
+#endregion
+
+    #region WallRun
     //Wallrunning
     //Variable
     public LayerMask whatIsWall;
@@ -530,6 +591,10 @@ public class GroundMovement : MonoBehaviour
     }
     private void StartWallrun()
     {
+        if (speedThreshold < maxSpeed.Length - 1)
+        {
+            timeSpeedBoostRemaining = maxTimeToSpeedBoost;
+        }
         rb.useGravity = false;
         isWallRunning = true;
         rb.constraints = RigidbodyConstraints.FreezePositionY;
@@ -538,7 +603,7 @@ public class GroundMovement : MonoBehaviour
         {
             rb.AddForce(orientation.forward * wallrunForce * Time.deltaTime);
 
-            
+
             if (isWallRight)
                 rb.AddForce(orientation.right * wallrunForce / 5 * Time.deltaTime);
             else
@@ -551,11 +616,11 @@ public class GroundMovement : MonoBehaviour
         rb.useGravity = true;
         rb.constraints = RigidbodyConstraints.None;
     }
-    private void CheckForWall() 
+    private void CheckForWall()
     {
         isWallRight = Physics.Raycast(transform.position, orientation.right, 1f, whatIsWall);
         isWallLeft = Physics.Raycast(transform.position, -orientation.right, 1f, whatIsWall);
-        
+
         //leave wall run
         if (!isWallLeft && !isWallRight) StopWallRun();
         ////reset jump
@@ -565,6 +630,13 @@ public class GroundMovement : MonoBehaviour
             readyToJump = true;
         }
     }
+    #endregion
 
+    #region Dash
+    void Dash()
+    {
+        rb.AddForce((dashTarget.position - transform.position) * dashForce);
+    }
+    #endregion
 }
 
