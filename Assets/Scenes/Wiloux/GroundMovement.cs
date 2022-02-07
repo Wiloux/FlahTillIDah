@@ -95,7 +95,7 @@ public class GroundMovement : MonoBehaviour
     public float speed = 12.5f;
     public float drag = 6f;
 
-    private Vector3 myRotation;
+    public Vector3 myRotation;
 
     public float percentage;
 
@@ -344,7 +344,7 @@ public class GroundMovement : MonoBehaviour
     private void Glid()
     {
         myRotation.x += 20 * Input.GetAxis("Vertical") * Time.deltaTime;
-        myRotation.x = Mathf.Clamp(myRotation.x, -45, 45);
+        myRotation.x = Mathf.Clamp(myRotation.x, -20, 45);
 
         myRotation.y += 20 * Input.GetAxis("Horizontal") * Time.deltaTime;
 
