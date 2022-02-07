@@ -135,10 +135,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cfb9691fc823575429cbca026554b8e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  speed: 25
-  drag: 6
   rb: {fileID: 0}
+  moveState: 1
+  glideSpeed: 12.5
+  drag: 6
   percentage: 0
+  runSpeed: 0
 --- !u!54 &38372524
 Rigidbody:
   m_ObjectHideFlags: 0
