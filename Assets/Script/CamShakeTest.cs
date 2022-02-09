@@ -21,7 +21,7 @@ public class CamShakeTest : MonoBehaviour
         transform.localPosition = originalPos + new Vector3(Random.Range(-modifiedShaking, modifiedShaking), Random.Range(-modifiedShaking, modifiedShaking), 0);
         myCam = gameObject.GetComponent<Camera>();
         myCam.fieldOfView = moveController.myRotation.x + 80;
-        Debug.Log(myCam.fieldOfView);
+        //Debug.Log(myCam.fieldOfView);
         myCam.fieldOfView = Mathf.Clamp(myCam.fieldOfView,60, 80);
     }
 }

@@ -15,10 +15,13 @@ public class GlideMovement : MonoBehaviour
     [Space(10)]
 
     [Header("Glide")]
+    public Camera myCam;
     public float glideSpeed = 12.5f;
     public float drag = 6f;
     public Vector3 myRotation;
     public float percentage;
+    public float quickSpeed;
+    public float inputTest;
     [Space(10)]
 
     [Header("Run")]
@@ -30,13 +33,22 @@ public class GlideMovement : MonoBehaviour
     public float maxDashDistance = 5.0f;
     private float dashDistance = 5.0f;
     public float dashDuration = 0.15f;
-    public Transform dashTarget;
+    public Target[] dashTargets;
+    public Target currentTarget;
+    Target lastTarget;
 
 
     private void Start()
     {
         rb = GetComponent<Rigidbody>();
         myRotation = transform.eulerAngles;
+        dashTargets = FindObjectsOfType<Target>();
+        currentTarget = GetClosestEnemy(dashTargets);
+        if (currentTarget != null)
+        {
+            currentTarget.MakeActive(true);
+            lastTarget = currentTarget;
+        }
     }
 
     private void Update()
@@ -46,10 +58,10 @@ public class GlideMovement : MonoBehaviour
             myRotation.x += 20 * Input.GetAxis("Vertical") * Time.deltaTime;
             myRotation.x = Mathf.Clamp(myRotation.x, -20, 45);
 
-            myRotation.y += 20 * Input.GetAxis("Horizontal") * Time.deltaTime;
+            myRotation.y += 40 * Input.GetAxis("Horizontal") * Time.deltaTime;
 
             myRotation.z = -5 * Input.GetAxis("Horizontal");
-            myRotation.z = Mathf.Clamp(myRotation.z, -10, 10);
+            myRotation.z = Mathf.Clamp(myRotation.z, -30, 30);
 
             transform.rotation = Quaternion.Euler(myRotation);
 
@@ -60,32 +72,52 @@ public class GlideMovement : MonoBehaviour
 
             rb.drag = modifiedDrag;
             Vector3 localV = transform.InverseTransformDirection(rb.velocity);
-            localV.z = modifiedSpeed;
+            localV.z = modifiedSpeed + 20 * Input.GetAxis("Vertical") * Time.deltaTime;
+            //Debug.Log(localV.z);
             rb.velocity = transform.TransformDirection(localV);
+
         }
         if (moveState == movementState.running)
         {
             rb.drag = 0;
             transform.rotation = Quaternion.identity;
         }
-        if (Input.GetKeyDown(KeyCode.LeftShift))
+
+
+
+        currentTarget = GetClosestEnemy(dashTargets);
+        if (currentTarget != lastTarget)
         {
-            dashDistance = Vector3.Distance(dashTarget.position, transform.position);
-            if (dashDistance <= maxDashDistance) { 
-                Dash();
+            if (lastTarget != null)
+            {
+                lastTarget.MakeActive(false);
+            }
+            if (currentTarget != null)
+            {
+                currentTarget.MakeActive(true);
+                lastTarget = currentTarget;
+            }
+            else
+            {
+                lastTarget = null;
             }
         }
+        if (Input.GetKeyDown(KeyCode.LeftShift) && currentTarget != null)
+        {
+            Dash();
+        }
+
     }
 
     private void Movement()
     {
-       
+
     }
 
     void Dash()
     {
-        
-        var direction = (dashTarget.position - this.transform.position);
+
+        var direction = (currentTarget.transform.position - this.transform.position);
 
         // Making sure we have a reasonable vector here
         if (direction.magnitude >= 0.1f)
@@ -128,4 +160,34 @@ public class GlideMovement : MonoBehaviour
         this.transform.position = target;
         this.dashing = false;
     }
+
+    Target GetClosestEnemy(Target[] target)
+    {
+        Target bestTarget = null;
+        float closestDistanceSqr = Mathf.Infinity;
+        Vector3 currentPosition = transform.position;
+        foreach (Target potentialTarget in target)
+        {
+            Vector3 directionToTarget = potentialTarget.transform.position - currentPosition;
+            float dSqrToTarget = directionToTarget.sqrMagnitude;
+            if (dSqrToTarget < closestDistanceSqr)
+            {
+                closestDistanceSqr = dSqrToTarget;
+                bestTarget = potentialTarget;
+            }
+        }
+        dashDistance = Vector3.Distance(bestTarget.transform.position, Camera.main.ScreenToWorldPoint(new Vector3(Screen.width / 2, Screen.height / 2, 0)));
+
+        if (dashDistance <= maxDashDistance && bestTarget.isVisible == true)
+        {
+            return bestTarget;
+        }
+        else
+        {
+            return null;
+        }
+
+    }
+
+
 }
