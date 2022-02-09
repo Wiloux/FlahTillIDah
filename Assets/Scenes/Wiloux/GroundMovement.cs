@@ -26,6 +26,7 @@ public class GroundMovement : MonoBehaviour
     [Space(10)]
 
     [Header("Movement")]
+    public Vector3 movementDir;
     //Movement
     public float moveSpeed = 4500;
     //public float[] maxSpeed;    
@@ -60,7 +61,7 @@ public class GroundMovement : MonoBehaviour
 
     [Header("Input")]
     //Input
-    float x, y;
+    float horizontalInput, verticalInput;
     public bool jumping, sprinting, crouching;
     [Space(10)]
 
@@ -107,7 +108,7 @@ public class GroundMovement : MonoBehaviour
     public Vector3 characterVelocity { get; set; }
 
 
-    
+
 
     void Awake()
     {
@@ -152,7 +153,7 @@ public class GroundMovement : MonoBehaviour
         }
         else if (wantsGlinding && !grounded)
         {
-            Glid();
+            // Glid();
         }
 
         //QTE ACCELERATION
@@ -177,12 +178,28 @@ public class GroundMovement : MonoBehaviour
         //}
     }
 
+    public Transform directionTransform;
+
     private void Update()
     {
         MyInput();
 
-        if (!wantsGlinding)
-            Look();
+        //ROTATE PLAYER WITH DIRECTION
+
+        directionTransform.position =(transform.position)+ orientation.transform.forward;
+
+        Vector3 lookAtPos = directionTransform.position - orientation.transform.position;
+
+        if (Input.GetAxisRaw("Horizontal") != 0 || Input.GetAxisRaw("Vertical") != 0)
+        {
+            lookAtPos.y = 0; // do not rotate the player around x
+            Quaternion newRotation = Quaternion.LookRotation(lookAtPos, transform.up);
+            transform.rotation = Quaternion.Slerp(transform.rotation, newRotation, Time.deltaTime * 8);
+
+        } // Quaternion newRotation = Quaternion.LookRotation(lookAtPos, transform.up);
+        //transform.rotation = Quaternion.Slerp(transform.rotation, newRotation, Time.deltaTime * 8);
+
+
 
         if (!wantsGlinding)
         {
@@ -217,8 +234,12 @@ public class GroundMovement : MonoBehaviour
     /// </summary>
     private void MyInput()
     {
-        x = Input.GetAxisRaw("Horizontal");
-        y = Input.GetAxisRaw("Vertical");
+        horizontalInput = Input.GetAxisRaw("Horizontal");
+        verticalInput = Input.GetAxisRaw("Vertical");
+
+        movementDir = new Vector3(horizontalInput, 0, verticalInput);
+        movementDir.Normalize();
+
         jumping = Input.GetButton("Jump");
         crouching = Input.GetKey(KeyCode.LeftControl);
         if (Input.GetKeyDown(KeyCode.E) && !CheckIfGrounded())
@@ -269,7 +290,7 @@ public class GroundMovement : MonoBehaviour
         float xMag = mag.x, yMag = mag.y;
 
         //Counteract sliding and sloppy movement
-        CounterMovement(x, y, mag);
+        CounterMovement(horizontalInput, verticalInput, mag);
 
         //If holding jump && ready to jump, then jump
         if (readyToJump && jumping) Jump();
@@ -286,10 +307,10 @@ public class GroundMovement : MonoBehaviour
         }
 
         //If speed is larger than maxspeed, cancel out the input so you don't go over max speed
-        if (x > 0 && xMag > maxSpeed) x = 0;
-        if (x < 0 && xMag < -maxSpeed) x = 0;
-        if (y > 0 && yMag > maxSpeed) y = 0;
-        if (y < 0 && yMag < -maxSpeed) y = 0;
+        if (horizontalInput > 0 && xMag > maxSpeed) horizontalInput = 0;
+        if (horizontalInput < 0 && xMag < -maxSpeed) horizontalInput = 0;
+        if (verticalInput > 0 && yMag > maxSpeed) verticalInput = 0;
+        if (verticalInput < 0 && yMag < -maxSpeed) verticalInput = 0;
 
         //Some multipliers
         float multiplier = 1f, multiplierV = 1f;
@@ -304,7 +325,7 @@ public class GroundMovement : MonoBehaviour
         // Movement while sliding
         if (grounded && crouching) multiplierV = 0f;
 
-        slopeMoveDirection = Vector3.ProjectOnPlane(orientation.transform.forward * y * multiplier * multiplierV, slopeHit.normal);
+        slopeMoveDirection = Vector3.ProjectOnPlane(orientation.transform.forward * verticalInput * multiplier * multiplierV, slopeHit.normal);
 
         if (isOnSlope && grounded)
         {
@@ -314,60 +335,60 @@ public class GroundMovement : MonoBehaviour
         {
 
             //Apply forces to move player
-            rb.AddForce(orientation.transform.forward * y * moveSpeed * Time.deltaTime * multiplier * multiplierV);
-            rb.AddForce(orientation.transform.right * x * moveSpeed * Time.deltaTime * multiplier);
+            rb.AddForce(orientation.transform.forward * verticalInput * moveSpeed * Time.deltaTime * multiplier * multiplierV);
+            rb.AddForce(orientation.transform.right * horizontalInput * moveSpeed * Time.deltaTime * multiplier);
         }
     }
     private float desiredX;
-    private void Look()
-    {
-        float mouseX = Input.GetAxis("Mouse X") * sensitivity * Time.fixedDeltaTime * sensMultiplier;
-        float mouseY = Input.GetAxis("Mouse Y") * sensitivity * Time.fixedDeltaTime * sensMultiplier;
+    //private void Look()
+    //{
+    //    float mouseX = Input.GetAxis("Mouse X") * sensitivity * Time.fixedDeltaTime * sensMultiplier;
+    //    float mouseY = Input.GetAxis("Mouse Y") * sensitivity * Time.fixedDeltaTime * sensMultiplier;
 
-        //Find current look rotation
-        Vector3 rot = playerCam.transform.localRotation.eulerAngles;
-        desiredX = rot.y + mouseX;
+    //    //Find current look rotation
+    //    Vector3 rot = playerCam.transform.localRotation.eulerAngles;
+    //    desiredX = rot.y + mouseX;
 
-        //Rotate, and also make sure we dont over- or under-rotate.
-        xRotation -= mouseY;
-        xRotation = Mathf.Clamp(xRotation, -90f, 90f);
+    //    //Rotate, and also make sure we dont over- or under-rotate.
+    //    xRotation -= mouseY;
+    //    xRotation = Mathf.Clamp(xRotation, -90f, 90f);
 
-        //Perform the rotations
-        playerCam.transform.localRotation = Quaternion.Euler(xRotation, desiredX, 0);
-        orientation.transform.localRotation = Quaternion.Euler(0, desiredX, 0);
+    //    //Perform the rotations
+    //    playerCam.transform.localRotation = Quaternion.Euler(xRotation, desiredX, 0);
+    //    orientation.transform.localRotation = Quaternion.Euler(0, desiredX, 0);
 
-        if (!wantsGlinding)
-        {
-            transform.rotation = Quaternion.Euler(new Vector3(0, transform.rotation.y, 0));
-        }
-    }
-    private void Glid()
-    {
-        myRotation.x += 20 * Input.GetAxis("Vertical") * Time.deltaTime;
-        myRotation.x = Mathf.Clamp(myRotation.x, -20, 45);
+    //    if (!wantsGlinding)
+    //    {
+    //        transform.rotation = Quaternion.Euler(new Vector3(0, transform.rotation.y, 0));
+    //    }
+    //}
+    //private void Glid()
+    //{
+    //    myRotation.x += 20 * Input.GetAxis("Vertical") * Time.deltaTime;
+    //    myRotation.x = Mathf.Clamp(myRotation.x, -20, 45);
 
-        myRotation.y += 20 * Input.GetAxis("Horizontal") * Time.deltaTime;
+    //    myRotation.y += 20 * Input.GetAxis("Horizontal") * Time.deltaTime;
 
-        myRotation.z = -5 * Input.GetAxis("Horizontal");
-        myRotation.z = Mathf.Clamp(myRotation.z, -5, 5);
+    //    myRotation.z = -5 * Input.GetAxis("Horizontal");
+    //    myRotation.z = Mathf.Clamp(myRotation.z, -5, 5);
 
-        orientation.transform.rotation = Quaternion.Euler(myRotation);
-        transform.rotation = Quaternion.Euler(myRotation);
+    //    orientation.transform.rotation = Quaternion.Euler(myRotation);
+    //    transform.rotation = Quaternion.Euler(myRotation);
 
-        percentage = myRotation.x / 45;
+    //    percentage = myRotation.x / 45;
 
-        float modifiedDrag = (percentage * -2) + 6;
-        float modifiedSpeed = ((speed + speedModifier) - speed) + speed;
+    //    float modifiedDrag = (percentage * -2) + 6;
+    //    float modifiedSpeed = ((speed + speedModifier) - speed) + speed;
 
-        rb.drag = modifiedDrag;
-        Vector3 localV = transform.InverseTransformDirection(rb.velocity);
-        localV.z = modifiedSpeed;
-        rb.velocity = transform.TransformDirection(localV);
+    //    rb.drag = modifiedDrag;
+    //    Vector3 localV = transform.InverseTransformDirection(rb.velocity);
+    //    localV.z = modifiedSpeed;
+    //    rb.velocity = transform.TransformDirection(localV);
 
-        playerCam.transform.localRotation = Quaternion.Euler(myRotation);
-        orientation.transform.localRotation = Quaternion.Euler(localV);
+    //    playerCam.transform.localRotation = Quaternion.Euler(myRotation);
+    //    orientation.transform.localRotation = Quaternion.Euler(localV);
 
-    }
+    //}
 
     private void CounterMovement(float x, float y, Vector2 mag)
     {
@@ -501,8 +522,8 @@ public class GroundMovement : MonoBehaviour
     {
         if (readyToJump && isWallRunning)
         {
-        
-            rb.constraints = RigidbodyConstraints.None;
+
+            //    rb.constraints = RigidbodyConstraints.None;
             jumping = true;
             readyToJump = false;
 
@@ -558,8 +579,8 @@ public class GroundMovement : MonoBehaviour
     {
         if (readyToJump && isWallRunning)
         {
-            
-            rb.constraints = RigidbodyConstraints.None;
+
+            // rb.constraints = RigidbodyConstraints.None;
             jumping = true;
             readyToJump = false;
 
@@ -589,7 +610,7 @@ public class GroundMovement : MonoBehaviour
         readyToJump = true;
         jumping = false;
     }
-#endregion
+    #endregion
 
     #region WallRun
     //Wallrunning
@@ -603,12 +624,12 @@ public class GroundMovement : MonoBehaviour
     private void WallRunInput()
     {
         //Wallrun
-        if (isWallRight ||isWallLeft)
+        if (isWallRight || isWallLeft)
         {
             wantsGlinding = false;
             StartWallrun();
         }
-        
+
         if (isWallRight && Input.GetKey(KeyCode.Space))
         {
             iswalljumping = true;
@@ -630,7 +651,7 @@ public class GroundMovement : MonoBehaviour
         //}
         rb.useGravity = false;
         isWallRunning = true;
-        rb.constraints = RigidbodyConstraints.FreezePositionY;
+        //rb.constraints = RigidbodyConstraints.FreezePositionY;
 
         if (rb.velocity.magnitude <= maxWallSpeed)
         {
@@ -647,7 +668,7 @@ public class GroundMovement : MonoBehaviour
     {
         isWallRunning = false;
         rb.useGravity = true;
-        rb.constraints = RigidbodyConstraints.None;
+        // rb.constraints = RigidbodyConstraints.None;
     }
     private void CheckForWall()
     {
@@ -659,7 +680,7 @@ public class GroundMovement : MonoBehaviour
         ////reset jump
         if (isWallLeft || isWallRight)
         {
-            rb.constraints = RigidbodyConstraints.None;
+            //   rb.constraints = RigidbodyConstraints.None;
             readyToJump = true;
         }
     }
