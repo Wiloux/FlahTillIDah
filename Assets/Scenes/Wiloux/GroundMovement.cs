@@ -111,6 +111,8 @@ public class GroundMovement : MonoBehaviour
 
     public float speedModifier = 20f;
 
+    public Transform camTarget;
+
     public Vector3 characterVelocity { get; set; }
 
 
@@ -142,6 +144,19 @@ public class GroundMovement : MonoBehaviour
     {
 
         grounded = CheckIfGrounded();
+
+        if(currentTarget != null)
+        {
+            camTarget.transform.position = (currentTarget.transform.position + transform.position)/2;
+            Vector3 dir = currentTarget.transform.position - transform.position;
+
+            dir.Normalize();
+            dir.y = 0;
+            camTarget.transform.rotation = Quaternion.LookRotation(dir);
+        } else
+        {
+            camTarget.transform.position = transform.position;
+        }
 
         if (!wantsGlinding && grounded)
         {
@@ -198,18 +213,6 @@ public class GroundMovement : MonoBehaviour
         MyInput();
 
         //ROTATE PLAYER WITH DIRECTION
-
-        directionTransform.position =(transform.position)+ orientation.transform.forward;
-
-        Vector3 lookAtPos = directionTransform.position - orientation.transform.position;
-
-        if (Input.GetAxisRaw("Horizontal") != 0 || Input.GetAxisRaw("Vertical") != 0)
-        {
-            lookAtPos.y = 0; // do not rotate the player around x
-            Quaternion newRotation = Quaternion.LookRotation(lookAtPos, transform.up);
-            transform.rotation = Quaternion.Slerp(transform.rotation, newRotation, Time.deltaTime * 8);
-
-        } // Quaternion newRotation = Quaternion.LookRotation(lookAtPos, transform.up);
         //transform.rotation = Quaternion.Slerp(transform.rotation, newRotation, Time.deltaTime * 8);
 
 
@@ -217,6 +220,17 @@ public class GroundMovement : MonoBehaviour
         if (!wantsGlinding)
         {
             rb.drag = 0;
+            directionTransform.position = (transform.position) + orientation.transform.forward;
+
+            Vector3 lookAtPos = directionTransform.position - orientation.transform.position;
+
+            if (Input.GetAxisRaw("Horizontal") != 0 || Input.GetAxisRaw("Vertical") != 0)
+            {
+                lookAtPos.y = 0; // do not rotate the player around x
+                Quaternion newRotation = Quaternion.LookRotation(lookAtPos, transform.up);
+                transform.rotation = Quaternion.Slerp(transform.rotation, newRotation, Time.deltaTime * 8);
+
+            }
         }
 
         if (grounded)
@@ -359,10 +373,12 @@ public class GroundMovement : MonoBehaviour
         if (grounded && crouching) multiplierV = 0f;
 
         slopeMoveDirection = Vector3.ProjectOnPlane(orientation.transform.forward * verticalInput * multiplier * multiplierV, slopeHit.normal);
+        float slidingForce = (1 - (slopeHit.normal.y / 0.7f)) * slopeSlidingSpeed;
 
         if (isOnSlope && grounded)
         {
-            rb.AddForce(Time.deltaTime * slopeSlidingSpeed * slopeHit.normal.normalized);
+
+            rb.AddForce(Time.deltaTime * Vector3.down * slidingForce);
         }
         else
         {
