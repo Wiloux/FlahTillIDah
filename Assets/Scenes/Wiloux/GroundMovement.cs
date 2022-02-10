@@ -124,6 +124,8 @@ public class GroundMovement : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
+        WallRunInput();
+        CheckForWall();
     }
 
     void Start()
@@ -151,7 +153,7 @@ public class GroundMovement : MonoBehaviour
         {
             camTarget.transform.position = (currentTarget.transform.position + transform.position)/2;
             Vector3 dir = currentTarget.transform.position - transform.position;
-
+            transform.LookAt(currentTarget.transform.position);
             dir.Normalize();
             dir.y = 0;
             camTarget.transform.rotation = Quaternion.LookRotation(dir);
@@ -225,10 +227,14 @@ public class GroundMovement : MonoBehaviour
             myAnim.SetBool("isFlying", true);
         else
             myAnim.SetBool("isFlying", false);
-        if(grounded == false && wantsGlinding == false)
+        if(grounded == false && wantsGlinding == false && isWallRunning == false)
             myAnim.SetBool("isFalling", true);
         if(grounded==true)
             myAnim.SetBool("isFalling", false);
+        if(isWallRunning)
+            myAnim.SetBool("isWallRunning", true);
+        else if (!isWallRunning)
+            myAnim.SetBool("isWallRunning", false);
 
         if (!wantsGlinding)
         {
@@ -684,12 +690,13 @@ public class GroundMovement : MonoBehaviour
     private void WallRunInput()
     {
         //Wallrun
-        if (isWallRight || isWallLeft)
-        {
-            wantsGlinding = false;
-            StartWallrun();
-        }
-
+        //if (isWallRight || isWallLeft)
+        //{
+        //    wantsGlinding = false;
+        //    StartWallrun();
+        //}
+        if (isWallRight) StartWallrun();
+        if (isWallLeft) StartWallrun();
         if (isWallRight && Input.GetKey(KeyCode.Space))
         {
             iswalljumping = true;
@@ -711,10 +718,11 @@ public class GroundMovement : MonoBehaviour
         //}
         rb.useGravity = false;
         isWallRunning = true;
-        //rb.constraints = RigidbodyConstraints.FreezePositionY;
+        rb.constraints = RigidbodyConstraints.FreezePositionY;
         Debug.Log("Start wall run");
         if (rb.velocity.magnitude <= maxWallSpeed)
         {
+            Debug.Log("Wall run really Started");
             rb.AddForce(orientation.forward * wallrunForce * Time.deltaTime);
 
 
@@ -728,19 +736,23 @@ public class GroundMovement : MonoBehaviour
     {
         isWallRunning = false;
         rb.useGravity = true;
-        // rb.constraints = RigidbodyConstraints.None;
+        rb.constraints = RigidbodyConstraints.None;
+        rb.constraints = RigidbodyConstraints.FreezeRotation;
     }
     private void CheckForWall()
     {
-        isWallRight = Physics.Raycast(transform.position, orientation.right, 1f, whatIsWall);
-        isWallLeft = Physics.Raycast(transform.position, -orientation.right, 1f, whatIsWall);
+        isWallRight = Physics.Raycast(transform.position, orientation.right, 3f, whatIsWall);
+        //Debug.DrawRay(transform.position, orientation.right,Color.green);
+        isWallLeft = Physics.Raycast(transform.position, -orientation.right, 3f, whatIsWall);
+        //Debug.DrawRay(transform.position, orientation.right, Color.red);
 
         //leave wall run
         if (!isWallLeft && !isWallRight) StopWallRun();
         ////reset jump
         if (isWallLeft || isWallRight)
         {
-            //   rb.constraints = RigidbodyConstraints.None;
+            rb.constraints = RigidbodyConstraints.None;
+            rb.constraints = RigidbodyConstraints.FreezeRotation;
             readyToJump = true;
         }
     }
