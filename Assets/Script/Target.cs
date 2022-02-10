@@ -8,18 +8,23 @@ public class Target : MonoBehaviour
     public Renderer rend;
     public bool isCurrent;
     public bool isVisible;
+    public GroundMovement player;
     private void Start()
     {
-        
+        player = FindObjectOfType<GroundMovement>();
     }
 
-    private void OnCollisionEnter(Collision collision)
+    private void OnTriggerEnter(Collider collision)
     {
-        if (collision.gameObject.CompareTag("Player"))
+        if (collision.CompareTag("Player"))
         {
+            isVisible = false;
             Debug.Log("Player hit target");
+            player.DestroyCrystal(gameObject);
+            Destroy(gameObject);
         }
     }
+
 
     public void MakeActive(bool shouldBeActive)
     {
@@ -43,5 +48,6 @@ public class Target : MonoBehaviour
         isVisible = true;
     }
 
+    
 
 }

@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 8371523217256937461}
   m_Layer: 0
   m_Name: DashTarget
-  m_TagString: Untagged
+  m_TagString: Target
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -113,3 +113,4 @@ MonoBehaviour:
   rend: {fileID: 8371523217256937456}
   isCurrent: 0
   isVisible: 0
+  player: {fileID: 0}

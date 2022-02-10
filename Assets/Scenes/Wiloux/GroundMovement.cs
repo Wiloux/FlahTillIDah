@@ -11,6 +11,7 @@ public class GroundMovement : MonoBehaviour
     [Header("Assignables")]
     public Transform playerCam;
     public Transform orientation;
+    public Animator myAnim;
     [Space(10)]
 
     [Header("Physics")]
@@ -36,6 +37,7 @@ public class GroundMovement : MonoBehaviour
     public LayerMask whatIsGround;
     public float counterMovement = 0.175f;
     private float threshold = 0.01f;
+    public bool isWallDashing;
 
     //QTE Accélération
     //public int speedThreshold;
@@ -88,9 +90,10 @@ public class GroundMovement : MonoBehaviour
     public float maxDashDistance = 5.0f;
     private float dashDistance = 5.0f;
     public float dashDuration = 0.15f;
-    public Target[] dashTargets;
+    //public Target[] dashTargets;
     public Target currentTarget;
     Target lastTarget;
+    public List<GameObject> dashTargets = new List<GameObject>();
     [Space(10)]
 
     [Header("Glide")]
@@ -125,8 +128,7 @@ public class GroundMovement : MonoBehaviour
 
     void Start()
     {
-        dashTargets = FindObjectsOfType<Target>();
-        currentTarget = GetClosestEnemy(dashTargets);
+        ScanCrystal();
         if (currentTarget != null)
         {
             currentTarget.MakeActive(true);
@@ -204,6 +206,7 @@ public class GroundMovement : MonoBehaviour
         //{
         //    speedBoostPrompt.SetActive(false);
         //}
+      
     }
 
     public Transform directionTransform;
@@ -214,8 +217,18 @@ public class GroundMovement : MonoBehaviour
 
         //ROTATE PLAYER WITH DIRECTION
         //transform.rotation = Quaternion.Slerp(transform.rotation, newRotation, Time.deltaTime * 8);
-
-
+        if (horizontalInput != 0 || verticalInput != 0 && wantsGlinding == false)
+            myAnim.SetBool("isRunning", true);
+        else
+            myAnim.SetBool("isRunning", false);
+        if (wantsGlinding)
+            myAnim.SetBool("isFlying", true);
+        else
+            myAnim.SetBool("isFlying", false);
+        if(grounded == false && wantsGlinding == false)
+            myAnim.SetBool("isFalling", true);
+        if(grounded==true)
+            myAnim.SetBool("isFalling", false);
 
         if (!wantsGlinding)
         {
@@ -699,7 +712,7 @@ public class GroundMovement : MonoBehaviour
         rb.useGravity = false;
         isWallRunning = true;
         //rb.constraints = RigidbodyConstraints.FreezePositionY;
-
+        Debug.Log("Start wall run");
         if (rb.velocity.magnitude <= maxWallSpeed)
         {
             rb.AddForce(orientation.forward * wallrunForce * Time.deltaTime);
@@ -747,6 +760,12 @@ public class GroundMovement : MonoBehaviour
         }
     }
 
+    public void ScanCrystal()
+    {
+        dashTargets.AddRange(GameObject.FindGameObjectsWithTag("Target"));
+        currentTarget = GetClosestEnemy(dashTargets);
+    }
+
     IEnumerator DashRoutine(Vector3 direction)
     {
         // Account for some edge cases   
@@ -781,22 +800,28 @@ public class GroundMovement : MonoBehaviour
         this.dashing = false;
     }
 
-    Target GetClosestEnemy(Target[] target)
+    Target GetClosestEnemy(List<GameObject> target)
     {
         Target bestTarget = null;
         float closestDistanceSqr = Mathf.Infinity;
         Vector3 currentPosition = transform.position;
-        foreach (Target potentialTarget in target)
+        foreach (GameObject potentialTarget in target)
         {
             Vector3 directionToTarget = potentialTarget.transform.position - currentPosition;
             float dSqrToTarget = directionToTarget.sqrMagnitude;
             if (dSqrToTarget < closestDistanceSqr)
             {
                 closestDistanceSqr = dSqrToTarget;
-                bestTarget = potentialTarget;
+                bestTarget = potentialTarget.GetComponent<Target>();
             }
         }
+        if (bestTarget != null) { 
         dashDistance = Vector3.Distance(bestTarget.transform.position, Camera.main.ScreenToWorldPoint(new Vector3(Screen.width / 2, Screen.height / 2, 0)));
+        }
+        else
+        {
+            return null;
+        }
 
         if (dashDistance <= maxDashDistance && bestTarget.isVisible == true)
         {
@@ -807,6 +832,13 @@ public class GroundMovement : MonoBehaviour
             return null;
         }
 
+       
+
+    }
+
+    public void DestroyCrystal(GameObject crystal)
+    {
+        dashTargets.Remove(crystal);
     }
     #endregion
 }
