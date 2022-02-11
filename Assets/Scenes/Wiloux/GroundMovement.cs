@@ -48,7 +48,6 @@ public class GroundMovement : MonoBehaviour
 
     [Header("Crouch & Slide")]
     //Crouch & Slide
-    private Vector3 crouchScale = new Vector3(1, 0.5f, 1);
     private Vector3 playerScale;
     public float slideForce = 400;
     public float slideCounterMovement = 0.2f;
@@ -219,7 +218,7 @@ public class GroundMovement : MonoBehaviour
 
         //ROTATE PLAYER WITH DIRECTION
         //transform.rotation = Quaternion.Slerp(transform.rotation, newRotation, Time.deltaTime * 8);
-        if (horizontalInput != 0 || verticalInput != 0 && wantsGlinding == false)
+        if ((horizontalInput != 0 || verticalInput != 0) && !wantsGlinding && !crouching && !isOnSlope)
             myAnim.SetBool("isRunning", true);
         else
             myAnim.SetBool("isRunning", false);
@@ -243,12 +242,15 @@ public class GroundMovement : MonoBehaviour
 
             Vector3 lookAtPos = directionTransform.position - orientation.transform.position;
 
-            if (Input.GetAxisRaw("Horizontal") != 0 || Input.GetAxisRaw("Vertical") != 0)
+            if (!crouching && !isOnSlope && grounded)
             {
-                lookAtPos.y = 0; // do not rotate the player around x
-                Quaternion newRotation = Quaternion.LookRotation(rb.velocity);
-                transform.rotation = Quaternion.Slerp(transform.rotation, newRotation, Time.deltaTime * 4);
+                if (Input.GetAxisRaw("Horizontal") != 0 || Input.GetAxisRaw("Vertical") != 0)
+                {
+                    lookAtPos.y = 0; // do not rotate the player around x
+                    Quaternion newRotation = Quaternion.LookRotation(rb.velocity);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, newRotation, Time.deltaTime * 4);
 
+                }
             }
         }
 
@@ -329,7 +331,7 @@ public class GroundMovement : MonoBehaviour
 
     private void StartCrouch()
     {
-        transform.localScale = crouchScale;
+        GetComponent<CapsuleCollider>().height /= 2;
         transform.position = new Vector3(transform.position.x, transform.position.y - 0.5f, transform.position.z);
         if (rb.velocity.magnitude > 0.5f)
         {
@@ -342,7 +344,7 @@ public class GroundMovement : MonoBehaviour
 
     private void StopCrouch()
     {
-        transform.localScale = playerScale;
+        GetComponent<CapsuleCollider>().height =2;
         transform.position = new Vector3(transform.position.x, transform.position.y + 0.5f, transform.position.z);
     }
 
@@ -366,11 +368,11 @@ public class GroundMovement : MonoBehaviour
         float maxSpeed = this.maxSpeed;
 
         //If sliding down a ramp, add force down so player stays grounded and also builds speed
-        if (crouching && grounded && readyToJump)
-        {
-            rb.AddForce(Vector3.down * Time.deltaTime * 3000);
-            return;
-        }
+        //if (crouching && grounded && readyToJump)
+        //{
+        //    rb.AddForce(Vector3.down * Time.deltaTime * 3000);
+        //    return;
+        //}
 
         //If speed is larger than maxspeed, cancel out the input so you don't go over max speed
         if (horizontalInput > 0 && xMag > maxSpeed) horizontalInput = 0;
@@ -392,12 +394,13 @@ public class GroundMovement : MonoBehaviour
         if (grounded && crouching) multiplierV = 0f;
 
         slopeMoveDirection = Vector3.ProjectOnPlane(orientation.transform.forward * verticalInput * multiplier * multiplierV, slopeHit.normal);
-        float slidingForce = (1 - (slopeHit.normal.y / 0.7f)) * slopeSlidingSpeed;
+        //float slidingForce = (1 - (slopeHit.normal.y / 0.7f)) * slopeSlidingSpeed;
+        float slopeCoefficient = Mathf.Cos(slopeAngle * Mathf.Deg2Rad);
 
         if (isOnSlope && grounded)
         {
-
-            rb.AddForce(Time.deltaTime * Vector3.down * slidingForce);
+            Vector3 slopeMovement = movementDir * slopeCoefficient * Time.fixedDeltaTime;
+            rb.MovePosition(slopeMovement + rb.position);
         }
         else
         {
