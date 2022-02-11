@@ -239,15 +239,15 @@ public class GroundMovement : MonoBehaviour
         if (!wantsGlinding)
         {
             rb.drag = 0;
-            directionTransform.position = (transform.position) + orientation.transform.forward;
+            directionTransform.position = transform.position + (Vector3.Scale(orientation.transform.forward, movementDir)*4);
 
             Vector3 lookAtPos = directionTransform.position - orientation.transform.position;
 
             if (Input.GetAxisRaw("Horizontal") != 0 || Input.GetAxisRaw("Vertical") != 0)
             {
                 lookAtPos.y = 0; // do not rotate the player around x
-                Quaternion newRotation = Quaternion.LookRotation(lookAtPos, transform.up);
-                transform.rotation = Quaternion.Slerp(transform.rotation, newRotation, Time.deltaTime * 8);
+                Quaternion newRotation = Quaternion.LookRotation(rb.velocity);
+                transform.rotation = Quaternion.Slerp(transform.rotation, newRotation, Time.deltaTime * 4);
 
             }
         }
